@@ -19,7 +19,8 @@
 
           <div class="d-flex flex-wrap gap-2">
             <router-link to="/products" class="btn btn-accent">Explore Products</router-link>
-            <router-link to="/register" class="btn btn-ghost">Create account</router-link>
+            <router-link v-if="!isLoggedIn" to="/register" class="btn btn-ghost">Create account</router-link>
+            <router-link v-else to="/orders" class="btn btn-ghost">View orders</router-link>
           </div>
         </div>
 
@@ -130,3 +131,10 @@
   padding: 14px 16px;
 }
 </style>
+
+<script setup>
+import { computed } from "vue";
+import { useAuthStore } from "../stores/auth";
+const auth = useAuthStore();
+const isLoggedIn = computed(() => auth.isLoggedIn);
+</script>

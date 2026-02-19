@@ -26,7 +26,7 @@
         class="d-flex justify-content-between align-items-center py-3"
         style="border-bottom: 1px solid rgba(36,27,24,0.10)"
       >
-        <div style="min-width: 240px">
+        <div class="flex-grow-1 me-3" style="min-width: 0">
           <div class="fw-semibold">{{ item.name }}</div>
           <div class="text-white-50">₱ {{ formatPrice(item.price) }}</div>
         </div>

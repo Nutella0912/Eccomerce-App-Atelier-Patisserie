@@ -45,12 +45,13 @@
 
               <div class="col-12">
                 <label class="form-label text-white-50">Password</label>
-                <input v-model="password" class="form-control input-dark" type="password" minlength="6" required />
+                <div class="small text-white-50 mb-1">Minimum 8 characters</div>
+                <input v-model="password" class="form-control input-dark" type="password" minlength="8" required />
               </div>
 
               <div class="col-12">
                 <label class="form-label text-white-50">Confirm password</label>
-                <input v-model="confirmPassword" class="form-control input-dark" type="password" minlength="6" required />
+                <input v-model="confirmPassword" class="form-control input-dark" type="password" minlength="8" required />
               </div>
 
               <div class="col-12 d-grid mt-2">

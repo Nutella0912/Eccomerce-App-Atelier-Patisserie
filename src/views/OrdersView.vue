@@ -108,7 +108,7 @@ async function openReceipt(order) {
               class="badge"
               :class="{
                 'bg-success': o.status === 'paid',
-                'bg-warning text-dark': o.status === 'pending',
+                'bg-warning text-dark': o.status === 'pending' || o.status === 'pending_verification',
                 'bg-danger': o.status === 'failed'
               }"
             >

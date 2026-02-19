@@ -16,10 +16,13 @@ const paymentMethod = ref("card");
 
 // manual GCash flow
 const gcashReference = ref("");
+const paymayaReference = ref("");
 
 // Helpers
 const total = computed(() => Number(cartStore.total || 0));
 const isGCash = computed(() => paymentMethod.value === "gcash");
+const isMaya = computed(() => paymentMethod.value === "paymaya");
+const isManual = computed(() => isGCash.value || isMaya.value);
 
 async function handleCheckout() {
   if (!total.value || total.value <= 0) {
@@ -31,6 +34,17 @@ async function handleCheckout() {
     const refNo = (gcashReference.value || "").trim();
     if (!refNo) {
       alert("Please enter your GCash reference number.");
+      return;
+    }
+    if (refNo.length < 6) {
+      alert("Reference number looks too short. Please double-check.");
+      return;
+    }
+  }
+  if (isMaya.value) {
+    const refNo = (paymayaReference.value || "").trim();
+    if (!refNo) {
+      alert("Please enter your Maya reference number.");
       return;
     }
     if (refNo.length < 6) {
@@ -66,7 +80,18 @@ async function handleCheckout() {
       return;
     }
 
-    
+    if (isMaya.value) {
+      await api.post("/payments/maya", {
+        orderId,
+        amount: total.value,
+        referenceNumber: paymayaReference.value.trim(),
+      });
+
+      ui.centerToastNotify("Checkout successful. Payment pending verification.");
+      router.push("/orders");
+      return;
+    }
+
     const { data } = await api.post("/payments/stripe", {
       orderId,
       amount: total.value,
@@ -145,6 +170,19 @@ async function handleCheckout() {
             </label>
             <input
               v-model="gcashReference"
+              class="form-control"
+              placeholder="e.g. 1234567890"
+              :disabled="isProcessing"
+            />
+            <div class="small text-muted mt-2">
+              Your payment will be marked <b>Pending</b> until an admin approves it.
+            </div>
+          </div>
+
+          <div v-if="paymentMethod === 'paymaya'" class="mb-4">
+            <label class="form-label text-muted">Maya Reference Number</label>
+            <input
+              v-model="paymayaReference"
               class="form-control"
               placeholder="e.g. 1234567890"
               :disabled="isProcessing"

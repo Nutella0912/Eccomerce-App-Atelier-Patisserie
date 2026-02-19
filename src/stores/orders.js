@@ -59,6 +59,8 @@ export const useOrdersStore = defineStore("orders", {
         const endpoint =
           payload.method === "gcash"
             ? "/payments/gcash"
+            : payload.method === "paymaya"
+            ? "/payments/maya"
             : "/payments/bank";
 
         const res = await api.post(endpoint, payload);
