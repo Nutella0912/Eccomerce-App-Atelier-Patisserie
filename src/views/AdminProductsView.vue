@@ -140,11 +140,16 @@
 
             <div class="field">
               <label class="field-label">Upload Image</label>
-              <input class="form-control input-soft" type="file" accept="image/*" @change="(e) => { addImageFile = e.target.files?.[0] || null; }" />
+              <input
+                class="form-control input-soft"
+                type="file"
+                accept="image/*"
+                @change="handleAddFileChange"
+              />
               <div class="field-help">Choose a photo from your computer. This will upload to Cloudinary.</div>
+            </div>
 
-              
-
+            <div class="field">
               <label class="field-label">Image URL</label>
               <input v-model.trim="addForm.imageUrl" class="form-control input-soft" placeholder="https://..." />
               <div class="field-help">Tip: use a direct image link ending in .jpg or .png for best results.</div>
@@ -195,11 +200,11 @@
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-ghost" type="button" @click="closeAdd" :disabled="saving">
+          <button class="btn btn-ghost" type="button" @click="closeAdd" :disabled="saving || uploadingAdd">
             Cancel
           </button>
-          <button class="btn btn-save" type="button" @click="saveAdd" :disabled="saving">
-            {{ saving ? "Saving..." : "Save Product" }}
+          <button class="btn btn-save" type="button" @click="saveAdd" :disabled="saving || uploadingAdd">
+            {{ saving ? "Saving..." : (uploadingAdd ? "Uploading..." : "Save Product") }}
           </button>
         </div>
       </div>
@@ -244,7 +249,12 @@
 
             <div class="field">
               <label class="field-label">Upload Image</label>
-              <input class="form-control input-soft" type="file" accept="image/*" @change="(e) => { editImageFile = e.target.files?.[0] || null; }" />
+              <input
+                class="form-control input-soft"
+                type="file"
+                accept="image/*"
+                @change="handleEditFileChange"
+              />
               <div class="field-help">Choose a photo from your computer. This will upload to Cloudinary.</div>
             </div>
 
@@ -293,11 +303,11 @@
         </div>
 
         <div class="modal-actions">
-          <button class="btn btn-ghost" type="button" @click="closeEdit" :disabled="saving">
+          <button class="btn btn-ghost" type="button" @click="closeEdit" :disabled="saving || uploadingEdit">
             Cancel
           </button>
-          <button class="btn btn-save" type="button" @click="saveEdit" :disabled="saving">
-            {{ saving ? "Saving..." : "Save Changes" }}
+          <button class="btn btn-save" type="button" @click="saveEdit" :disabled="saving || uploadingEdit">
+            {{ saving ? "Saving..." : (uploadingEdit ? "Uploading..." : "Save Changes") }}
           </button>
         </div>
       </div>
@@ -309,12 +319,15 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useProductsStore } from "../stores/products";
-import api from "../api/axios";
+import api from "../api/axios"; // (kept in case your axios interceptor is needed elsewhere in this file)
 
 const products = useProductsStore();
 
 const addImageFile = ref(null);
 const editImageFile = ref(null);
+
+const uploadingAdd = ref(false);
+const uploadingEdit = ref(false);
 
 async function uploadProductImage(file) {
   if (!file) return "";
@@ -340,8 +353,6 @@ async function uploadProductImage(file) {
 
   return data.secure_url || data.url || "";
 }
-
-
 
 const loading = ref(false);
 const q = ref("");
@@ -409,6 +420,8 @@ function formatPrice(value) {
 
 function openAdd() {
   formError.value = "";
+  addImageFile.value = null;
+
   addForm.value = {
     name: "",
     description: "",
@@ -416,6 +429,7 @@ function openAdd() {
     category: "cookie",
     imageUrl: ""
   };
+
   addOpen.value = true;
 }
 
@@ -426,6 +440,7 @@ function closeAdd() {
 function openEdit(p) {
   formError.value = "";
   editId.value = p._id;
+  editImageFile.value = null;
 
   editForm.value = {
     name: p.name || "",
@@ -451,16 +466,60 @@ function validateForm(f) {
   return "";
 }
 
-async function saveAdd() {
-  formError.value = validateForm(addForm.value);
-  if (formError.value) return;
+async function handleAddFileChange(e) {
+  const file = e?.target?.files?.[0];
+  if (!file) return;
 
-  saving.value = true;
+  formError.value = "";
+  addImageFile.value = file;
+
+  uploadingAdd.value = true;
   try {
-    if (addImageFile.value) {
+    const url = await uploadProductImage(file);
+    if (url) addForm.value.imageUrl = url; // updates preview immediately
+  } catch (err) {
+    console.error(err);
+    formError.value = err?.message || "Image upload failed.";
+  } finally {
+    uploadingAdd.value = false;
+  }
+}
+
+async function handleEditFileChange(e) {
+  const file = e?.target?.files?.[0];
+  if (!file) return;
+
+  formError.value = "";
+  editImageFile.value = file;
+
+  uploadingEdit.value = true;
+  try {
+    const url = await uploadProductImage(file);
+    if (url) editForm.value.imageUrl = url; // updates preview immediately
+  } catch (err) {
+    console.error(err);
+    formError.value = err?.message || "Image upload failed.";
+  } finally {
+    uploadingEdit.value = false;
+  }
+}
+
+async function saveAdd() {
+  saving.value = true;
+  formError.value = "";
+
+  try {
+    // If user selected a file but the URL isn't set yet, upload first.
+    if (addImageFile.value && !addForm.value.imageUrl) {
+      uploadingAdd.value = true;
       const url = await uploadProductImage(addImageFile.value);
       if (url) addForm.value.imageUrl = url;
+      uploadingAdd.value = false;
     }
+
+    formError.value = validateForm(addForm.value);
+    if (formError.value) return;
+
     await products.addProduct(addForm.value);
     await refresh();
     addOpen.value = false;
@@ -468,22 +527,30 @@ async function saveAdd() {
     formError.value =
       e?.response?.data?.message ||
       e?.response?.data?.error ||
+      e?.message ||
       "Failed to add product.";
   } finally {
+    uploadingAdd.value = false;
     saving.value = false;
   }
 }
 
 async function saveEdit() {
-  formError.value = validateForm(editForm.value);
-  if (formError.value) return;
-
   saving.value = true;
+  formError.value = "";
+
   try {
-    if (editImageFile.value) {
+    // If user selected a file but the URL isn't set yet, upload first.
+    if (editImageFile.value && !editForm.value.imageUrl) {
+      uploadingEdit.value = true;
       const url = await uploadProductImage(editImageFile.value);
       if (url) editForm.value.imageUrl = url;
+      uploadingEdit.value = false;
     }
+
+    formError.value = validateForm(editForm.value);
+    if (formError.value) return;
+
     await products.updateProduct(editId.value, editForm.value);
     await refresh();
     editOpen.value = false;
@@ -491,8 +558,10 @@ async function saveEdit() {
     formError.value =
       e?.response?.data?.message ||
       e?.response?.data?.error ||
+      e?.message ||
       "Failed to update product.";
   } finally {
+    uploadingEdit.value = false;
     saving.value = false;
   }
 }
