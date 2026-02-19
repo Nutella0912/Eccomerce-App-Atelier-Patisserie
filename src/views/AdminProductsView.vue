@@ -139,6 +139,12 @@
             </div>
 
             <div class="field">
+              <label class="field-label">Upload Image</label>
+              <input class="form-control input-soft" type="file" accept="image/*" @change="(e) => { addImageFile = e.target.files?.[0] || null; }" />
+              <div class="field-help">Choose a photo from your computer. This will upload to Cloudinary.</div>
+
+              
+
               <label class="field-label">Image URL</label>
               <input v-model.trim="addForm.imageUrl" class="form-control input-soft" placeholder="https://..." />
               <div class="field-help">Tip: use a direct image link ending in .jpg or .png for best results.</div>
@@ -237,6 +243,12 @@
             </div>
 
             <div class="field">
+              <label class="field-label">Upload Image</label>
+              <input class="form-control input-soft" type="file" accept="image/*" @change="(e) => { editImageFile = e.target.files?.[0] || null; }" />
+              <div class="field-help">Choose a photo from your computer. This will upload to Cloudinary.</div>
+            </div>
+
+            <div class="field">
               <label class="field-label">Image URL</label>
               <input v-model.trim="editForm.imageUrl" class="form-control input-soft" placeholder="https://..." />
             </div>
@@ -297,8 +309,39 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useProductsStore } from "../stores/products";
+import api from "../api/axios";
 
 const products = useProductsStore();
+
+const addImageFile = ref(null);
+const editImageFile = ref(null);
+
+async function uploadProductImage(file) {
+  if (!file) return "";
+
+  const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error("Cloudinary is not configured. Please set VITE_CLOUDINARY_CLOUD_NAME and VITE_CLOUDINARY_UPLOAD_PRESET.");
+  }
+
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const form = new FormData();
+  form.append("file", file);
+  form.append("upload_preset", uploadPreset);
+
+  const res = await fetch(url, { method: "POST", body: form });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data?.error?.message || "Failed to upload image to Cloudinary.");
+  }
+
+  return data.secure_url || data.url || "";
+}
+
+
 
 const loading = ref(false);
 const q = ref("");
@@ -414,6 +457,10 @@ async function saveAdd() {
 
   saving.value = true;
   try {
+    if (addImageFile.value) {
+      const url = await uploadProductImage(addImageFile.value);
+      if (url) addForm.value.imageUrl = url;
+    }
     await products.addProduct(addForm.value);
     await refresh();
     addOpen.value = false;
@@ -433,6 +480,10 @@ async function saveEdit() {
 
   saving.value = true;
   try {
+    if (editImageFile.value) {
+      const url = await uploadProductImage(editImageFile.value);
+      if (url) editForm.value.imageUrl = url;
+    }
     await products.updateProduct(editId.value, editForm.value);
     await refresh();
     editOpen.value = false;

@@ -3,11 +3,13 @@ import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import api from "../api/axios";
 import { useOrdersStore } from "../stores/orders";
+import { useCartStore } from "../stores/cart";
 import { useUiStore } from "../stores/ui";
 
 const route = useRoute();
 const router = useRouter();
 const orders = useOrdersStore();
+const cart = useCartStore();
 const ui = useUiStore();
 
 const loading = ref(true);
@@ -34,6 +36,13 @@ onMounted(async () => {
     // ✅ Center notification ONLY for checkout (payment)
     if (mode.value === "payment") {
       ui.centerToastNotify("Checkout successful. Payment confirmed.");
+
+      // Clear cart AFTER successful payment
+      try {
+        await cart.clearCart();
+      } catch {
+        // ignore
+      }
     }
 
     setTimeout(() => {

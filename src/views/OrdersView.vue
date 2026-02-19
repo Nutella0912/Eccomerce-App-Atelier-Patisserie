@@ -8,15 +8,9 @@ const orders = useOrdersStore();
 const cartStore = useCartStore();
 
 onMounted(async () => {
-  // Clear cart safely (avoid readonly warning)
-  try {
-    if (typeof cartStore.clearCart === "function") {
-      await cartStore.clearCart();
-    }
-  } catch (err) {
-    console.warn("Local cart clear notice:", err?.message || err);
-  }
-
+  // NOTE: Do NOT clear cart here.
+  // Clearing on the Orders page makes the cart look like it "disappears"
+  // when users navigate away and come back.
   await orders.fetchMyOrders();
 });
 

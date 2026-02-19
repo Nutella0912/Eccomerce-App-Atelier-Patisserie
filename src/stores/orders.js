@@ -12,11 +12,11 @@ export const useOrdersStore = defineStore("orders", {
     /**
      * INITIAL CHECKOUT: Creates the Order record in the database.
      */
-    async checkout() {
+    async checkout(deliveryAddress = null) {
       this.error = "";
       this.loading = true;
       try {
-        const res = await api.post("/orders/checkout");
+        const res = await api.post("/orders/checkout", deliveryAddress ? { deliveryAddress } : {});
         return res.data; // { order }
       } catch (e) {
         this.error = "Checkout failed.";
@@ -73,34 +73,25 @@ export const useOrdersStore = defineStore("orders", {
       }
     },
     /**
- * ✅ Download PDF receipt from backend
- * Backend route: GET /payments/:id/receipt
- */
-async downloadReceipt(paymentId) {
-  try {
-    const res = await api.get(`/payments/${paymentId}/receipt`, {
-      responseType: "blob",
-    });
-
-    const blob = new Blob([res.data], { type: "application/pdf" });
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `receipt-${paymentId}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    const msg =
-      err?.response?.data?.message ||
-      err?.message ||
-      "Could not download receipt.";
-    throw new Error(msg);
-  }
-},
+     * ✅ Open Stripe hosted receipt URL
+     * Backend route: GET /payments/:id/receipt -> { receiptUrl }
+     */
+    async downloadReceipt(paymentId) {
+      try {
+        const { data } = await api.get(`/payments/${paymentId}/receipt`);
+        if (data?.receiptUrl) {
+          window.open(data.receiptUrl, "_blank", "noopener,noreferrer");
+          return;
+        }
+        throw new Error(data?.message || "Receipt not available yet.");
+      } catch (err) {
+        const msg =
+          err?.response?.data?.message ||
+          err?.message ||
+          "Could not open receipt.";
+        throw new Error(msg);
+      }
+    },
 
 
     /**

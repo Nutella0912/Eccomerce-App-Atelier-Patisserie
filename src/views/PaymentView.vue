@@ -53,11 +53,26 @@ async function handleCheckout() {
     }
   }
 
+
+  // Load saved delivery address
+  let deliveryAddress = null;
+  try {
+    const { data } = await api.get("/users/address");
+    deliveryAddress = data?.deliveryAddress || null;
+  } catch {
+    deliveryAddress = null;
+  }
+
+  if (!deliveryAddress || !deliveryAddress.line1 || !deliveryAddress.city) {
+    alert("Please add your delivery address first (Delivery Address page).");
+    return;
+  }
+
   isProcessing.value = true;
   console.log("🚀 Starting Checkout Process...");
 
   try {
-    const orderData = await orders.checkout();
+    const orderData = await orders.checkout(deliveryAddress);
     const orderId = orderData.order?._id;
 
     if (!orderId) {
@@ -92,11 +107,15 @@ async function handleCheckout() {
       return;
     }
 
+    // IMPORTANT:
+    // We ONLY use Stripe for cards.
+    // Maya/GCash are handled as manual verification flows (reference number)
+    // because Stripe does NOT accept "paymaya" as a Checkout payment method.
     const { data } = await api.post("/payments/stripe", {
       orderId,
       amount: total.value,
-      methodType: paymentMethod.value, // "card" | "paymaya"
-      saveCard: paymentMethod.value === "card",
+      methodType: "card",
+      saveCard: true,
     });
 
     if (data.url) {

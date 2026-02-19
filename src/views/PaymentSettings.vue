@@ -4,6 +4,7 @@ import api from "../api/axios";
 
 const savedMethods = ref([]);
 const isLoading = ref(true);
+const manualInfo = ref({ gcash: null, maya: null });
 
 /**
  * Fetch linked payment methods
@@ -16,6 +17,28 @@ const fetchMethods = async () => {
     console.error("Error loading methods", err);
   } finally {
     isLoading.value = false;
+  }
+};
+
+const fetchManualInfo = async () => {
+  try {
+    const { data } = await api.get("/payments/manual-info");
+    manualInfo.value = {
+      gcash: data?.gcash || null,
+      maya: data?.maya || null,
+    };
+  } catch (err) {
+    // non-fatal
+    manualInfo.value = { gcash: null, maya: null };
+  }
+};
+
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    alert("Copied!");
+  } catch {
+    alert("Copy failed. You can manually select and copy the text.");
   }
 };
 
@@ -52,7 +75,9 @@ const handleLinkNewCard = async () => {
   }
 };
 
-onMounted(fetchMethods);
+onMounted(async () => {
+  await Promise.all([fetchMethods(), fetchManualInfo()]);
+});
 </script>
 
 <template>
@@ -64,6 +89,46 @@ onMounted(fetchMethods);
     </div>
 
     <div v-else class="methods-grid">
+      <!-- Manual wallet options (display-only) -->
+      <div class="mb-4">
+        <div class="fw-bold mb-2">Wallet options</div>
+        <div class="small text-muted mb-3">
+          These are <b>manual</b> payment options. Pay using the details below, then enter the reference number during checkout.
+        </div>
+
+        <div v-if="manualInfo.gcash" class="method-card d-flex align-items-center p-3 mb-3 shadow-sm">
+          <div class="card-icon me-3">💎</div>
+          <div class="flex-grow-1">
+            <div class="fw-bold">{{ manualInfo.gcash.label }}</div>
+            <div class="text-muted small">{{ manualInfo.gcash.accountName }}</div>
+            <div v-if="manualInfo.gcash.number" class="small">
+              <span class="text-muted">Number:</span> <span class="fw-semibold">{{ manualInfo.gcash.number }}</span>
+              <button class="btn btn-sm btn-light ms-2" @click="copyText(manualInfo.gcash.number)">Copy</button>
+            </div>
+            <div class="text-muted small mt-1">{{ manualInfo.gcash.note }}</div>
+            <div v-if="manualInfo.gcash.qrUrl" class="mt-2">
+              <a class="small" :href="manualInfo.gcash.qrUrl" target="_blank" rel="noopener noreferrer">Open QR</a>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="manualInfo.maya" class="method-card d-flex align-items-center p-3 mb-3 shadow-sm">
+          <div class="card-icon me-3">✨</div>
+          <div class="flex-grow-1">
+            <div class="fw-bold">{{ manualInfo.maya.label }}</div>
+            <div class="text-muted small">{{ manualInfo.maya.accountName }}</div>
+            <div v-if="manualInfo.maya.number" class="small">
+              <span class="text-muted">Number:</span> <span class="fw-semibold">{{ manualInfo.maya.number }}</span>
+              <button class="btn btn-sm btn-light ms-2" @click="copyText(manualInfo.maya.number)">Copy</button>
+            </div>
+            <div class="text-muted small mt-1">{{ manualInfo.maya.note }}</div>
+            <div v-if="manualInfo.maya.qrUrl" class="mt-2">
+              <a class="small" :href="manualInfo.maya.qrUrl" target="_blank" rel="noopener noreferrer">Open QR</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="savedMethods.length === 0" class="empty-state p-4 border rounded text-center">
         <p class="text-muted mb-0">No payment methods linked yet.</p>
       </div>

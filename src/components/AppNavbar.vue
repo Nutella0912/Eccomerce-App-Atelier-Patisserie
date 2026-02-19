@@ -77,6 +77,14 @@ function logout() {
             Orders
           </router-link>
 
+          <router-link
+            v-if="isLoggedIn && !isAdmin"
+            class="btn btn-ghost"
+            to="/address"
+          >
+            Delivery Address
+          </router-link>
+
           <!-- ===== ADMIN LINKS ===== -->
           <router-link
             v-if="isLoggedIn && isAdmin"
@@ -84,6 +92,14 @@ function logout() {
             to="/admin/products"
           >
             Admin Products
+          </router-link>
+
+          <router-link
+            v-if="isLoggedIn && isAdmin"
+            class="btn btn-ghost"
+            to="/admin/deliveries"
+          >
+            Deliveries
           </router-link>
 
           <router-link

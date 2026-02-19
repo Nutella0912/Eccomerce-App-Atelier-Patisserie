@@ -15,6 +15,8 @@ import PaymentView from "../views/PaymentView.vue";
 import PaymentSuccess from "../views/PaymentSuccess.vue";
 import SetupSuccess from "../views/SetupSuccess.vue";
 import AdminPayments from "../views/AdminPayment.vue";
+import DeliveryAddressView from "../views/DeliveryAddressView.vue";
+import AdminDeliveriesView from "../views/AdminDeliveriesView.vue";
 
 const routes = [
   { path: "/", component: HomeView },
@@ -23,6 +25,7 @@ const routes = [
   { path: "/products", component: ProductsView },
   { path: "/products/:id", component: ProductDetailsView },
   { path: "/orders", component: OrdersView, meta: { requiresAuth: true } },
+  { path: "/address", component: DeliveryAddressView, meta: { requiresAuth: true, userOnly: true } },
   { path: "/cart", component: CartView, meta: { requiresAuth: true } },
   { 
     path: "/payment", 
@@ -60,6 +63,11 @@ const routes = [
     path: "/admin/products", 
     component: AdminProductsView, 
     meta: { requiresAuth: true, requiresAdmin: true } 
+  },
+  {
+    path: "/admin/deliveries",
+    component: AdminDeliveriesView,
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ];
 
